@@ -36,6 +36,7 @@ func main() {
 	logrus.Info("Successfully pinged database")
 	http.HandleFunc("/db/store-result", storeResultHandler(db))
 	http.HandleFunc("/db/store-session", StoreChatSession(db))
+	http.HandleFunc("/db/fetch-chat-history", FetchChatHistory(db))
 
 	http.HandleFunc("/db/fetch-sessions", FetchChatSessions(db))
 

@@ -49,17 +49,15 @@ def qa(question: str) -> str:
 def chat(request: ChatRequest):
     question = request.question
 
-    # result = qa(question)
-    answer = """Kullback-Leibler Divergence is a measure of difference between two probability distributions
-    and can be considered as a similarity or distance measure, but it is not a distance in the strict
-    mathematical sense. It is also known as Relative Entropy or KL Divergence. It is not a distance since
-    axioms 3 and 4 of the Distance function are not satisfied. It is the difference between Entropy and
-    Cross Entropy and is a special case of Bregman divergence.
-    """
-    sources = """/code/curriculum/Nuggets/Kullback-Leibler Divergence.md, /code/curriculum/Nuggets/Similarity or Distance Measures.md"""
+    result = qa(question)
+    # answer = """Kullback-Leibler Divergence is a measure of difference between two probability distributions
+    # and can be considered as a similarity or distance measure, but it is not a distance in the strict
+    # mathematical sense.
+    # """
+    # sources = """/code/curriculum/Nuggets/Kullback-Leibler Divergence.md, /code/curriculum/Nuggets/Similarity or Distance Measures.md"""
+    # return {"answer": answer, "sources": sources}
 
-    # return {"answer": result["answer"], "sources": result["sources"]}
-    return {"answer": answer, "sources": sources}
+    return {"answer": result["answer"], "sources": result["sources"]}
 
 
 @app.get("/health")

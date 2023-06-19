@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -25,9 +26,10 @@ type Session struct {
 }
 
 type Message struct {
-	ID        uuid.UUID `db:"id"`
+	ID        int64     `db:"id"`
 	ChatID    uuid.UUID `db:"chat_id"`
-	Content   string    `db:"content"`
+	Question  string    `db:"question"`
+	Answer    string    `db:"answer"`
 	Sources   string    `db:"sources"`
 	IsBot     bool      `db:"is_bot"`
 	Timestamp time.Time `db:"timestamp"`
@@ -86,23 +88,84 @@ func FetchChatSessions(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func FetchChatHistory(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Extract the chatId from the query parameters
+		chatID := r.URL.Query().Get("chatId")
+
+		// Query the database to fetch the chat history
+		rows, err := db.Query("SELECT id, chat_id, question, answer, sources, timestamp FROM messages WHERE chat_id = ?", chatID)
+		if err != nil {
+			logrus.Error("Failed to fetch chat history: ", err)
+			http.Error(w, "Failed to fetch chat history", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		// Create a struct to store the retrieved messages
+		var messages []Message
+
+		// Iterate over the rows and populate the messages struct
+		for rows.Next() {
+			var message Message
+			if err := rows.Scan(&message.ID, &message.ChatID, &message.Question, &message.Answer, &message.Sources, &message.Timestamp); err != nil {
+				logrus.Error("Failed to scan row: ", err)
+				http.Error(w, "Failed to fetch chat history", http.StatusInternalServerError)
+				return
+			}
+			messages = append(messages, message)
+		}
+
+		// Convert the messages struct to JSON
+		response, err := json.Marshal(messages)
+		if err != nil {
+			logrus.Error("Failed to marshal messages: ", err)
+			http.Error(w, "Failed to fetch chat history", http.StatusInternalServerError)
+			return
+		}
+
+		// Set the Content-Type header and write the response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(response)
+		logrus.Info("Successfully fetched chat history")
+	}
+}
+
 func StoreChatSession(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var chatSession Session
+		logrus.Info("Storing chat session")
 
 		if err := json.NewDecoder(r.Body).Decode(&chatSession); err != nil {
+			logrus.Error("Failed to parse request body: ", err)
 			http.Error(w, "Failed to parse request body", http.StatusBadRequest)
 			return
+		} else {
+			logrus.Info("Successfully parsed request body", chatSession)
 		}
+		logrus.Info("starting to store chat session")
 
 		// Store the chat session in the database
-		_, err := db.Exec("INSERT INTO chats (id, timestamp, title) VALUES ($1, $2, $3)", chatSession.ID, chatSession.Timestamp, chatSession.Title)
+		stmt, err := db.Prepare("INSERT INTO chats (id, timestamp, title) VALUES (?, ?, ?)")
 		if err != nil {
-			http.Error(w, "Failed to store chat session", http.StatusInternalServerError)
+			logrus.Error("failed to prepare database statement: ", err)
+			http.Error(w, "failed to prepare database statement", http.StatusInternalServerError)
 			return
 		}
 
+		_, err = stmt.Exec(chatSession.ID, chatSession.Timestamp, chatSession.Title)
+		if err != nil {
+			logrus.Error("Failed to store chat session: ", err)
+			http.Error(w, "Failed to store chat session", http.StatusInternalServerError)
+			return
+		} else {
+			logrus.Info("Successfully stored chat session")
+		}
+
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("{}"))
 	}
 }
 
@@ -131,11 +194,11 @@ func initDB() (*sql.DB, error) {
 		);
 
 		CREATE TABLE IF NOT EXISTS messages (
-			id INTEGER PRIMARY KEY,
+			id INT PRIMARY KEY,
 			chat_id TEXT,
-			content TEXT,
+			question TEXT,
+			answer TEXT,
 			sources TEXT,
-			is_bot BOOLEAN,
 			timestamp TIMESTAMP,
 			FOREIGN KEY(chat_id) REFERENCES chats(id)
 		);
@@ -154,16 +217,25 @@ func storeResultHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Parse the request JSON
 		var request struct {
+			Chatid   string `json:"chatid"`
 			Question string `json:"question"`
 			Answer   string `json:"answer"`
 			Sources  string `json:"sources"`
-			Chatid   string `json:"chatid"`
 		}
+
+		// Retrieve the highest available id
+		var highestID int
+		var err = db.QueryRow("SELECT COALESCE(MAX(id), 0) FROM messages").Scan(&highestID)
+		if err != nil {
+			fmt.Println("Error retrieving highest ID:", err)
+			return
+		}
+		var newID = highestID + 1
 
 		// debugging request, printing to console
 		logrus.Info("request received by storeResultHandler: ", r.Body)
 
-		err := json.NewDecoder(r.Body).Decode(&request)
+		err = json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
 			logrus.Error("failed to parse request JSON: ", err)
 			http.Error(w, "failed to parse request JSON", http.StatusBadRequest)
@@ -174,8 +246,8 @@ func storeResultHandler(db *sql.DB) http.HandlerFunc {
 
 		// Insert the result into the database
 		stmt, err := db.Prepare(`
-			INSERT INTO messages (chat_id, content, sources, is_bot, timestamp)
-			VALUES (?, ?, ?, ?, ?)
+			INSERT INTO messages (id, chat_id, question, answer, sources, timestamp)
+			VALUES (?, ?, ?, ?, ?, ?)
 		`)
 
 		if err != nil {
@@ -184,7 +256,7 @@ func storeResultHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		_, err = stmt.Exec(request.Chatid, request.Answer, request.Sources, true, time.Now())
+		_, err = stmt.Exec(newID, request.Chatid, request.Question, request.Answer, request.Sources, time.Now())
 		if err != nil {
 			logrus.Error("failed to insert message into the database: ", err)
 			http.Error(w, "failed to insert message into the database", http.StatusInternalServerError)
@@ -194,8 +266,6 @@ func storeResultHandler(db *sql.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-
-		// Return an empty JSON object as the response
 		w.Write([]byte("{}"))
 	}
 }

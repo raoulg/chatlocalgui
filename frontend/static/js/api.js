@@ -15,12 +15,6 @@ export async function fetchData(url, method = 'GET', body = null, headers = {}) 
 
       const response = await fetch(url, options);
 
-      if (!response.ok) {
-        throw new Error(`Request to ${url} failed`);
-      } else {
-        console.log(`Request to ${url} succeeded`);
-      }
-
       return response.json();
     } catch (error) {
       console.error(error);
