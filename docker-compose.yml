@@ -1,0 +1,29 @@
+version: "3.9"
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    networks:
+      - mynetwork
+    volumes:
+      - $HOME/.cache/chatlocal:/root/.cache/chatlocal
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+  gui:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend/static:/app/static
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
