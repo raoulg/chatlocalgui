@@ -23,12 +23,13 @@ document.getElementById('chatInput').addEventListener('keypress', function (e) {
 
 document.getElementById('sendButton').addEventListener('click', async function () {
     const input = document.getElementById('chatInput');
+    const question = input.value;
+    input.value = '';
 
     const health = await fetchData('http://localhost:8000/health');
     console.log(health.status);
 
-    addChatBubble(input.value, 'user', activeSession);
-    const question = input.value;
+    addChatBubble(question, 'user', activeSession);
     console.log(question);
 
     const response = await fetchData('http://localhost:8000/api/chat','POST', { question });
@@ -67,7 +68,6 @@ document.getElementById('sendButton').addEventListener('click', async function (
     console.log(storeresult);
     console.log("stored chat")
 
-    input.value = '';
 });
 
 document.getElementById('newChatButton').addEventListener('click', async function () {
