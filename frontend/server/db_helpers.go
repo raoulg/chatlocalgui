@@ -241,7 +241,8 @@ func storeResultHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "failed to parse request JSON", http.StatusBadRequest)
 			return
 		} else {
-			logrus.Info("successfully parsed request JSON: ", request)
+			logrus.Info("successfully parsed request JSON: chatid ", request.Chatid)
+			logrus.Info("successfully parsed request JSON: sources ", request.Sources)
 		}
 
 		// Insert the result into the database
