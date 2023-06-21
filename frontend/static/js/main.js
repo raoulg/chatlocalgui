@@ -41,6 +41,9 @@ document.getElementById('sendButton').addEventListener('click', async function (
     addChatBubble(bubbleContent, 'bot', activeSession);
     console.log("stored: ", activeSession.dataset.stored);
 
+    // when sending the message, check if the session is already stored
+    // if not, store the session
+    // I dont save the session at creation, because this might create a lot of empty sessions
     if (activeSession.dataset.stored === 'false') {
         console.log('Storing chat session', activeSession.id, activeSession.dataset.timestamp, activeSession.dataset.title)
         // Store the chat session in the backend
@@ -58,12 +61,13 @@ document.getElementById('sendButton').addEventListener('click', async function (
         console.log('Chat session already stored', activeSession.id);
     }
 
+    console.log("attempting to log sources:", sources)
 
     const storeresult = await fetchData('db/store-result', 'POST', {
         chatid : activeSession.id,
         question : question,
         answer : answer,
-        source: sources
+        sources: sources
     });
     console.log(storeresult);
     console.log("stored chat")
@@ -86,6 +90,8 @@ document.getElementById('newChatButton').addEventListener('click', async functio
         sessionElement.dataset.title = title;
         sessionElement.dataset.stored = 'false';
         sessionElement.className = 'chatSession';
+        // the chatList is a list of all chat sessions on the left of the screen
+        // the user can click them to open the stored chat
         document.getElementById('chatList').appendChild(sessionElement);
 
         // Add click event listener to the new chat session element
@@ -97,6 +103,8 @@ document.getElementById('newChatButton').addEventListener('click', async functio
         const historyElement = document.createElement('div');
         historyElement.style.display = 'none';
         document.getElementById('chatHistory').appendChild(historyElement);
+        // add the new chat history element to the chatSessions object
+        // the chatSessions are the actual chat bubbles
         chatSessions[id] = historyElement;
 
         sessionElement.click();
@@ -119,13 +127,10 @@ window.addEventListener('DOMContentLoaded', async function () {
             // You can display a message or perform any other action here
             return;
         }
-        // check if the length of response is bigger or equal to 1
+        // The case when there are sessions
         if (sessions.length >= 1) {
             console.log('Found chat sessions:', sessions.length);
         }
-
-        console.log("loading sessions", sessions);
-
 
         sessions.forEach(session => {
             const { id, title, timestamp } = session;
@@ -160,8 +165,10 @@ window.addEventListener('DOMContentLoaded', async function () {
 
                 // Add chat bubbles for each message in the history
                 history.forEach((message) => {
+                    console.log("message: ", message);
                     addChatBubble(message.Question, 'user', sessionElement);
-                    addChatBubble(message.Answer, 'bot', sessionElement);
+                    const bubbleContent = `${message.Answer}<br><br>Sources: ${message.Sources}`;
+                    addChatBubble(bubbleContent, 'bot', sessionElement);
                 });
             });
 
