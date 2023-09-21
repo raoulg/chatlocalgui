@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import List
 
-from chatlocal import DataLoader, FileType, VectorStore
+from chatlocal import DataLoader, FileType, VectorStore, VectorStoreSettings, ModelType
 from loguru import logger
 
 
@@ -16,7 +16,14 @@ def build() -> None:
     ftype = [FileType(t) for t in filetypes.split(",")]
     dataloader = DataLoader(filetypes=ftype)
     dataloader.load_files(docpath)
-    vectorstore = VectorStore.from_dataloader(dataloader)
+    settings = VectorStoreSettings(
+        chunk_size=1500,
+        separator="\n",
+        store_file=Path("scepa.pkl"),
+        modeltype=ModelType.OPENAI,
+    )
+
+    vectorstore = VectorStore.from_dataloader(dataloader, settings= settings)
     vectorstore.save()
 
 
