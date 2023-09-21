@@ -11,7 +11,7 @@ serve:
 	@echo "$(GREEN)Please wait a few seconds while the service is starting."
 	@echo "------------------------"
 	@echo "Access your application at:"
-	@echo "Backend: http://localhost:8000"
+	@echo "Backend: http://localhost:8000/health"
 	@echo "Frontend: http://localhost:3000"
 	@echo "------------------------$(NC)"
 
@@ -21,7 +21,7 @@ up:
 	@echo "$(GREEN)Please wait a few seconds while the service is starting."
 	@echo "------------------------"
 	@echo "Access your application at:"
-	@echo "Backend: http://localhost:8000"
+	@echo "Backend: http://localhost:8000/health"
 	@echo "Frontend: http://localhost:3000"
 	@echo "------------------------$(NC)"
 
