@@ -6,7 +6,6 @@ authors = [
 name = "backend"
 version = "0.2.0"
 description = "serving a python backend for chatlocal"
-readme = "README.md"
 requires-python = ">=3.9, <3.11"
 
 dependencies = [

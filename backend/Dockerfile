@@ -1,28 +1,25 @@
 # Dockerfile-python
-FROM python:3.9.16
+FROM python:3.10.12
 
 RUN apt-get update
+RUN apt-get install -y build-essential libpoppler-cpp-dev pkg-config
 
 WORKDIR /app
 
-
-ENV POETRY_VERSION=1.5.1 \
-	PYTHONPATH="${PYTHONPATH}:/app" \
-	PIP_NO_CACHE_DIR=off \
-	PIP_DEFAULT_TIMEOUT=100
-
 RUN pip install --upgrade pip
-RUN  pip install "poetry==$POETRY_VERSION"
+RUN  pip install pdm
 
-COPY . .
+COPY pyproject.toml pdm.lock /app/
 
-RUN poetry config virtualenvs.create false \
-	&& poetry install --no-dev --no-ansi
+RUN pdm install
+
+COPY src src
 
 
 EXPOSE 8000
 
 ENV DOCPATH /app/notes
 
-ENTRYPOINT ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+ENTRYPOINT ["pdm", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
