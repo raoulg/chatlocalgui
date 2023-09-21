@@ -24,13 +24,14 @@ class ChatRequest(BaseModel):
 
 
 cachepath = Path(os.getenv("CACHE_DIR", Path.home() / ".cache" / "chatlocal"))
-indexpath = str(cachepath / "docs.index")
-storepath = str(cachepath / "vectorstore.pkl")
+indexpath = str(cachepath / "scepa.index")
+storepath = cachepath / "scepa.pkl"
+assert storepath.exists()
 
 # Load the LangChain.
 index = faiss.read_index(indexpath)
 
-with open(storepath, "rb") as f:
+with storepath.open(mode="rb") as f:
     store = pickle.load(f)
 
 store.index = index
